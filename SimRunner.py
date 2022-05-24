@@ -39,7 +39,9 @@ class TurRunner(SimManager):
         self.protocol =  self.potential.trivial_protocol().copy()
 
         self.system = System(self.protocol, self.potential)
+        self.system.has_velocity=False
         self.eq_system = System(self.eq_protocol, self.potential)
+        self.eq_system.has_velocity=False
         self.system.protocol.normalize()
         self.system.protocol.time_stretch(self.params['tau'])
 
