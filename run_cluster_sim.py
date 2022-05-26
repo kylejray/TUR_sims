@@ -24,8 +24,6 @@ simrun = TurRunner(params = defaults)
 simrun.save_name = save_func
 simrun.change_params({'N':N,'dt':dt})
 
-taus= [1]
-
 #run_name = 'heatmap_sym_detail_2X20L_5X8g_p16p31_N40/'
 #save_dir = '/home/kylejray/FQ_sims/results/{}/'.format(run_name)
 
@@ -34,10 +32,11 @@ taus= [1]
 
 
 # my_param = params[rank]
-time = taus[rank]
-simrun.change_params({'tau': time})
+
+n = [1_000, 4_000, 16_000, 64_000, 256_000, 512_000] [rank]
+simrun.change_params({'N': n})
 # save parameters to output file by printing
-sys.stdout.write('my rank:{} of {}, tau={} '.format(rank+1, size, simrun.params['tau']))
+sys.stdout.write('my rank:{} of {}, N={} '.format(rank+1, size, simrun.params['N']))
 # perform local computation using local param
 simrun.run_sim()
 # save your results
