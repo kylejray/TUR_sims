@@ -51,12 +51,14 @@ class TurRunner(SimManager):
 
         self.procs = [
             sp.ReturnFinalState(),
-            sp.MeasureAllState(trial_request=np.s_[:200],step_request=np.s_[::as_step]), 
+            sp.TerminateOnMean(rp.get_time_constant_work, target=1, step_request=np.s_[::as_step], output_name='all_W'),
+            sp.MeasureAllState(trial_request=np.s_[:200], step_request=np.s_[::as_step]), 
             tp.CountJumps(output_name='jump_trajectories'),
             ]
         
         sim_kwargs = {'damping':self.params['lambda'], 'temp':1/self.params['beta'], 'dt':self.params['dt'], 'procedures':self.procs}
         self.sim = setup_sim(self.system, self.init_state, **sim_kwargs)
+        self.sim.reference_system = self.eq_system
         return
     
     def analyze_output(self):
