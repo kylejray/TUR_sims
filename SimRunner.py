@@ -15,7 +15,7 @@ from infoenginessims.simprocedures import trajectory_measurements as tp
 from infoenginessims.simprocedures.basic_simprocedures import ReturnFinalState
 
 
-default_parameters = {'localization':18., 'location':.5, 'depth':3, 'tilt':2., 'beta':1., 'tau':1., 'scale':1., 'dt':1/10000, 'lambda':1, 'N':10_000}
+default_parameters = {'localization':18., 'location':.5, 'depth':3, 'tilt':2., 'beta':1., 'tau':1., 'scale':1., 'dt':1/10000, 'lambda':1, 'N':10_000, 'target_work':1}
 
 
 
@@ -51,7 +51,7 @@ class TurRunner(SimManager):
 
         self.procs = [
             sp.ReturnFinalState(),
-            sp.TerminateOnMean(rp.get_time_constant_work, target=1, step_request=np.s_[::as_step], output_name='all_W'),
+            sp.TerminateOnMean(rp.get_time_constant_work, target=self.params['target_work'], step_request=np.s_[::as_step], output_name='all_W'),
             sp.MeasureAllState(trial_request=np.s_[:200], step_request=np.s_[::as_step]), 
             tp.CountJumps(output_name='jump_trajectories'),
             ]
