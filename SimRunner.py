@@ -78,12 +78,17 @@ class SaveParams():
 
 class SaveSimOutput():
     def run(self, SimManager):
-        sim_dict = {'init_state':SimManager.sim.initial_state,'final_state':SimManager.sim.output.final_state, 'all_state': SimManager.sim.output.all_state['states']}
+        keys = ['final_state', 'all_state', 'nsteps', 'all_w']
+        vals = [getattr(SimManager.sim.output,item) for item in keys]
+        sim_dict = { k:v for k,v in zip(keys, vals)}
+        sim_dict.update({'init_state':SimManager.sim.initial_state})
+        
         SimManager.save_dict.update({'sim_dict':sim_dict})
 
 class SaveFinalWork():
     def run(self, SimManager):
         SimManager.save_dict.update({'final_W':SimManager.sim.output.final_W})
+
 
 
 
