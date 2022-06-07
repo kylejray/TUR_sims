@@ -78,7 +78,7 @@ class SaveParams():
 
 class SaveSimOutput():
     def run(self, SimManager):
-        keys = ['final_state', 'all_state', 'all_w']
+        keys = ['final_state', 'all_state', 'all_W']
         vals = [getattr(SimManager.sim.output,item) for item in keys]
         sim_dict = { k:v for k,v in zip(keys, vals)}
         sim_dict.update({'init_state':SimManager.sim.initial_state, 'nsteps':SimManager.sim.nsteps})
