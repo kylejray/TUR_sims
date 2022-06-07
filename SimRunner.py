@@ -15,7 +15,7 @@ from infoenginessims.simprocedures import trajectory_measurements as tp
 from infoenginessims.simprocedures.basic_simprocedures import ReturnFinalState
 
 
-default_parameters = {'localization':18., 'location':.5, 'depth':3, 'tilt':2., 'beta':1., 'tau':1., 'scale':1., 'dt':1/10000, 'lambda':1, 'N':10_000, 'target_work':1}
+default_parameters = {'localization':18., 'location':.5, 'depth':3, 'tilt':2., 'beta':1., 'tau':1., 'scale':1., 'dt':1/10000, 'lambda':1, 'N':10_000, 'target_work':1.}
 
 
 
@@ -49,12 +49,7 @@ class TurRunner(SimManager):
 
         as_step = max(1, int((self.params['tau']/self.params['dt'])/500))
 
-        self.procs = [
-            sp.ReturnFinalState(),
-            sp.TerminateOnMean(rp.get_time_constant_work, target=self.params['target_work'], step_request=np.s_[::as_step], output_name='all_W'),
-            sp.MeasureAllState(trial_request=np.s_[:200], step_request=np.s_[::as_step]), 
-            tp.CountJumps(output_name='jump_trajectories'),
-            ]
+        self.procs = self.set_simprocs(as_step) 
         
         sim_kwargs = {'damping':self.params['lambda'], 'temp':1/self.params['beta'], 'dt':self.params['dt'], 'procedures':self.procs}
         self.sim = setup_sim(self.system, self.init_state, **sim_kwargs)
@@ -70,7 +65,13 @@ class TurRunner(SimManager):
 
         setattr(self.sim.output, 'final_W', final_W)
 
-    
+    def set_simprocs(self, as_step):
+        return [
+            sp.ReturnFinalState(),
+            sp.TerminateOnMean(rp.get_time_constant_work, target=self.params['target_work'], step_request=np.s_[::as_step], output_name='all_W'),
+            sp.MeasureAllState(trial_request=np.s_[:200], step_request=np.s_[::as_step]), 
+            tp.CountJumps(output_name='jump_trajectories'),
+            ]
     
 class SaveParams():
     def run(self, SimManager):
