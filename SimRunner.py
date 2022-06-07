@@ -5,7 +5,7 @@ from quick_sim import setup_sim
 import kyle_tools as kt
 from kyle_tools.multisim import SimManager
 from sus.protocol_designer import *
-from sus.library.free_energy_probe import odw_gaussian as odw_potential
+from sus.library.free_energy_probe import lintilt_gaussian as odw_potential
 
 sys.path.append(os.path.expanduser('~/source/simtools/'))
 # from infoenginessims.api import *
@@ -45,7 +45,7 @@ class TurRunner(SimManager):
         self.system.protocol.normalize()
         self.system.protocol.time_stretch(self.params['tau'])
 
-        self.init_state = self.eq_system.eq_state(self.params['N'], t=0)
+        self.init_state = self.eq_system.eq_state(self.params['N'], t=0, beta=self.params['beta'])
 
         as_step = max(1, int((self.params['tau']/self.params['dt'])/500))
 
