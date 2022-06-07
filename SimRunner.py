@@ -45,7 +45,7 @@ class TurRunner(SimManager):
         self.system.protocol.normalize()
         self.system.protocol.time_stretch(self.params['tau'])
 
-        self.init_state = self.eq_system.eq_state(self.params['N'], t=0)
+        self.init_state = self.eq_system.eq_state(self.params['N'], t=0, beta=self.params['beta'])
 
         as_step = max(1, int((self.params['tau']/self.params['dt'])/500))
 
