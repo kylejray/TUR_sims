@@ -5,7 +5,7 @@ from quick_sim import setup_sim
 import kyle_tools as kt
 from kyle_tools.multisim import SimManager
 from sus.protocol_designer import *
-from sus.library.free_energy_probe import odw_gaussian as odw_potential
+from sus.library.free_energy_probe import lintilt_gaussian as odw_potential
 
 sys.path.append(os.path.expanduser('~/source/simtools/'))
 # from infoenginessims.api import *
