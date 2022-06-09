@@ -92,6 +92,40 @@ class SaveFinalWork():
 
 
 
+class TauRunner(TurRunner):
 
+    def set_simprocs(self, as_step):
+        return [
+            sp.ReturnFinalState(),
+            sp.MeasureAllState(trial_request=np.s_[:200], step_request=np.s_[::as_step]), 
+            tp.CountJumps(output_name='jump_trajectories'),
+            rp.MeasureFinalValue(rp.get_dW, 'final_W'),
+            sp.MeasureMeanValue(rp.get_dW, output_name='all_W', step_request=np.s_[::as_step])
+            ]
+    def analyze_output(self):
+        pass
 
+    def initialize_sim(self):
+        key_list = ['location', 'location', 'depth', 'depth', 'localization', 'localization']
+        self.potential.default_params = [self.params[key] for key in key_list ]
+        self.potential.default_params[0] *= -1
+        prot = self.potential.trivial_protocol().copy()
+        prot.params[2,1] -= self.params['tilt']
+        prot.params[3,1] += self.params['tilt']
+        rev_prot = prot.copy()
+        rev_prot.reverse()
+        rev_prot.time_shift(1)
+        self.protocol = Compound_Protocol([prot, rev_prot])
+        self.system = System(self.protocol, self.potential)
+        self.system.has_velocity=False
+        self.system.protocol.normalize()
+        self.system.protocol.time_stretch(self.params['tau'])
+        self.init_state = self.system.eq_state(self.params['N'], t=0, beta=self.params['beta'])
+        as_step = max(1, int((self.params['tau']/self.params['dt'])/500))
+        self.procs = self.set_simprocs(as_step) 
+
+        sim_kwargs = {'damping':self.params['lambda'], 'temp':1/self.params['beta'], 'dt':self.params['dt'],    'procedures':self.procs}
+        self.sim = setup_sim(self.system, self.init_state, **sim_kwargs)
+        return
+    
 
