@@ -3,6 +3,8 @@ import sys, os
 sys.path.append(os.path.expanduser('~/source'))
 from quick_sim import setup_sim
 import kyle_tools as kt
+import numpy as np
+from scipy.stats import moment, sem
 from kyle_tools.multisim import SimManager
 from sus.protocol_designer import *
 from sus.library.free_energy_probe import lintilt_gaussian as odw_potential
@@ -57,13 +59,24 @@ class TurRunner(SimManager):
         return
     
     def analyze_output(self):
-        final_state = self.sim.output.final_state
-        init_state = self.sim.initial_state
-        U0 = self.system.get_potential(init_state, 0) - self.eq_system.get_potential(init_state, 0)
-        UF = self.eq_system.get_potential(final_state, 0) - self.system.get_potential(final_state, 0)
-        final_W = U0 + UF
+        if not hasattr(self.sim.output, 'final_W'):
+            final_state = self.sim.output.final_state
+            init_state = self.sim.initial_state
+            U0 = self.system.get_potential(init_state, 0) - self.eq_system.get_potential(init_state, 0)
+            UF = self.eq_system.get_potential(final_state, 0) - self.system.get_potential(final_state, 0)
+            final_W = U0 + UF
+            setattr(self.sim.output, 'final_W', final_W)
+        works =self.sim.output.final_W
+        work_stats = get_work_averages(works)
+        for key, value in work_stats.items():
+            tur_dict = {k:v for k,v in zip(['hg','hvv','tggl'],get_turs(value['avg'][0]) )}
+            value.update(tur_dict)
+        work_stats['moments'] = get_moments(works, 4)
+        setattr(self.sim.output, 'work_stats', work_stats)
+            
 
-        setattr(self.sim.output, 'final_W', final_W)
+
+
 
     def set_simprocs(self, as_step):
         return [
@@ -79,7 +92,7 @@ class SaveParams():
 
 class SaveSimOutput():
     def run(self, SimManager):
-        keys = ['final_state', 'all_state', 'all_W']
+        keys = ['final_state', 'all_state', 'all_W', 'work_stats']
         vals = [getattr(SimManager.sim.output,item) for item in keys]
         sim_dict = { k:v for k,v in zip(keys, vals)}
         sim_dict.update({'init_state':SimManager.sim.initial_state, 'nsteps':SimManager.sim.nsteps})
@@ -102,19 +115,22 @@ class TauRunner(TurRunner):
             rp.MeasureFinalValue(rp.get_dW, 'final_W'),
             sp.MeasureMeanValue(rp.get_dW, output_name='all_W', step_request=np.s_[::as_step])
             ]
-    def analyze_output(self):
-        pass
 
     def initialize_sim(self):
-        key_list = ['location', 'location', 'depth', 'depth', 'localization', 'localization']
+        key_list = ['location', 'location', 'depth', 'depth', 'localization', 'localization', 'tilt']
         self.potential.default_params = [self.params[key] for key in key_list ]
         self.potential.default_params[0] *= -1
+        self.potential.default_params[-1] *= 0
+
         prot = self.potential.trivial_protocol().copy()
-        prot.params[2,1] -= self.params['tilt']
-        prot.params[3,1] += self.params['tilt']
+        prot.params[-1,1] = self.params['tilt']
+        prot.params[2,1] = .05*self.params['depth']
         rev_prot = prot.copy()
         rev_prot.reverse()
-        rev_prot.time_shift(1)
+        if 'hold' in self.params.keys():
+            rev_prot.time_shift(1+self.params['hold'])
+        else:
+            rev_prot.time_shift(1)
         self.protocol = Compound_Protocol([prot, rev_prot])
         self.system = System(self.protocol, self.potential)
         self.system.has_velocity=False
@@ -129,3 +145,40 @@ class TauRunner(TurRunner):
         return
     
 
+def get_work_averages(works):
+    cond_keys = ['real','pos', 'neg']
+    out = {key:{} for key in cond_keys}
+    for c_key, cond in zip(['real','pos', 'neg'],[None, works>0, works<0]):
+        temp = get_avg_stats(works, condition=cond)
+        for item,key in zip(temp, ['avg','ft','emin']):
+            out[c_key][key] = item
+    return out
+
+def get_turs(sigma):
+    HG = 2/sigma
+    HVV = 2/(np.exp(sigma)-1)
+    TGGL = np.sinh(kt.inv_xtanhx(sigma/2))**-2
+    try: TGGL = TGGL[0]
+    except: pass
+    return [HG, HVV, TGGL]
+
+def get_moments(sigma_dist, order):
+    return [moment(sigma_dist, moment=i+1) for i in range(order)]
+
+
+def get_avg_stats(work, condition=None):
+    N = len(work)
+    ft = np.exp(-work)
+    tanh = np.tanh(work/2) 
+    if condition is not None:
+        cond_w = work[condition]
+        Nc = len(cond_w)
+        work = (Nc/N)*cond_w*(1-np.exp(-cond_w))
+        ft = (Nc/N)*(1+np.exp(-cond_w))
+        tanh = (Nc/N)*np.tanh(cond_w/2)*(1-np.exp(-cond_w))
+        
+    avg = [np.mean(work), sem(work)]
+    ft = [np.mean(ft), sem(ft)]
+    avg_tanh, sem_tanh = np.mean(tanh), sem(tanh)
+    emin = [ 1/avg_tanh-1, (sem_tanh/avg_tanh**2)]
+    return [avg, ft, emin]
