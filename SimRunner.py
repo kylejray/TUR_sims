@@ -29,15 +29,24 @@ class TurRunner(SimManager):
 
         self.save_procs = [SaveParams(), SaveSimOutput(), SaveFinalWork()]
 
-    
+    def verify_param(self, key, val):
+        keys = ['tau', 'tilt', 'localization', 'location', 'hold', 'tau']
+        objectives = ['{}>0'] * len(keys)
+        obj_dict = {k:v for k,v in zip(keys, objectives)}
+        return eval(obj_dict[key].format(val))
+        
+
     def initialize_sim(self):
-        key_list = ['location', 'location', 'depth', 'depth', 'localization', 'localization']
+        key_list = ['location', 'location', 'depth', 'depth', 'localization', 'localization', 'tilt']
         self.potential.default_params = [self.params[key] for key in key_list ]
         self.potential.default_params[0] *= -1
+        self.potential.default_params[-1] *= 0
+
         self.eq_protocol = self.potential.trivial_protocol().copy()
 
-        self.potential.default_params[2] -= self.params['tilt']
-        self.potential.default_params[3] += self.params['tilt']
+        self.potential.default_params[-1] = self.params['tilt']
+
+        self.potential.default_params[2] = .05*self.params['depth']
         self.protocol =  self.potential.trivial_protocol().copy()
 
         self.system = System(self.protocol, self.potential)
@@ -113,7 +122,7 @@ class TauRunner(TurRunner):
             sp.MeasureAllState(trial_request=np.s_[:200], step_request=np.s_[::as_step]), 
             tp.CountJumps(output_name='jump_trajectories'),
             rp.MeasureFinalValue(rp.get_dW, 'final_W'),
-            sp.MeasureMeanValue(rp.get_dW, output_name='all_W', step_request=np.s_[::as_step])
+            rp.MeasureRunningMean(rp.get_dW, output_name='all_W', step_request=np.s_[::as_step])
             ]
 
     def initialize_sim(self):
@@ -128,7 +137,8 @@ class TauRunner(TurRunner):
         rev_prot = prot.copy()
         rev_prot.reverse()
         if 'hold' in self.params.keys():
-            rev_prot.time_shift(1+self.params['hold'])
+            hold_ratio = self.params['hold']
+            rev_prot.time_shift(1+(2*hold_ratio)/(1-hold_ratio))
         else:
             rev_prot.time_shift(1)
         self.protocol = Compound_Protocol([prot, rev_prot])
