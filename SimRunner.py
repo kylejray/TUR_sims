@@ -17,7 +17,7 @@ from infoenginessims.simprocedures import trajectory_measurements as tp
 from infoenginessims.simprocedures.basic_simprocedures import ReturnFinalState
 
 
-default_parameters = {'localization':18., 'location':.5, 'depth':3, 'tilt':2., 'beta':1., 'tau':1., 'scale':1., 'dt':1/10000, 'lambda':1, 'N':10_000, 'target_work':1.}
+default_parameters = {'localization':18., 'location':.5, 'depth_0':3, 'depth_1':3, 'tilt':2., 'beta':1., 'tau':1., 'scale':1., 'dt':1/10000, 'lambda':1, 'N':10_000, 'target_work':1.}
 
 
 
@@ -37,7 +37,7 @@ class TurRunner(SimManager):
         
 
     def initialize_sim(self):
-        key_list = ['location', 'location', 'depth', 'depth', 'localization', 'localization', 'tilt']
+        key_list = ['location', 'location', 'depth_0', 'depth_1', 'localization', 'localization', 'tilt']
         self.potential.default_params = [self.params[key] for key in key_list ]
         self.potential.default_params[0] *= -1
         self.potential.default_params[-1] *= 0
@@ -46,7 +46,7 @@ class TurRunner(SimManager):
 
         self.potential.default_params[-1] = self.params['tilt']
 
-        self.potential.default_params[2] = .05*self.params['depth']
+        self.potential.default_params[2] = .05*self.params['depth_0']
         self.protocol =  self.potential.trivial_protocol().copy()
 
         self.system = System(self.protocol, self.potential)
@@ -94,7 +94,21 @@ class TurRunner(SimManager):
             sp.MeasureAllState(trial_request=np.s_[:200], step_request=np.s_[::as_step]), 
             tp.CountJumps(output_name='jump_trajectories'),
             ]
-    
+
+
+class SaveSimLight():
+    def run(self, SimManager):
+        sim_dict = {}
+        sim_dict.update({'work_stats':SimManager.sim.output.work_stats})
+        sim_dict.update({'all_state':SimManager.sim.output.all_state})
+        sim_dict.update({'all_W':SimManager.sim.output.all_state})
+        final_W = SimManager.sim.output.final_W
+        fluc_hist = ft_hist(final_W)
+        counts, bins = np.histogram(final_W, bins=100)
+        sim_dict.update({'ft_hist':fluc_hist,'work_hist':[bins,counts]})
+        SimManager.save_dict.update({'sim_dict':sim_dict})
+
+
 class SaveParams():
     def run(self, SimManager):
         SimManager.save_dict.update({'params':SimManager.params})
@@ -126,14 +140,14 @@ class TauRunner(TurRunner):
             ]
 
     def initialize_sim(self):
-        key_list = ['location', 'location', 'depth', 'depth', 'localization', 'localization', 'tilt']
+        key_list = ['location', 'location', 'depth_0', 'depth_1', 'localization', 'localization', 'tilt']
         self.potential.default_params = [self.params[key] for key in key_list ]
         self.potential.default_params[0] *= -1
         self.potential.default_params[-1] *= 0
 
         prot = self.potential.trivial_protocol().copy()
         prot.params[-1,1] = self.params['tilt']
-        prot.params[2,1] = .05*self.params['depth']
+        prot.params[2,1] = .05*self.params['depth_0']
         rev_prot = prot.copy()
         rev_prot.reverse()
         if 'hold' in self.params.keys():
@@ -192,3 +206,17 @@ def get_avg_stats(work, condition=None):
     avg_tanh, sem_tanh = np.mean(tanh), sem(tanh)
     emin = [ 1/avg_tanh-1, (sem_tanh/avg_tanh**2)]
     return [avg, ft, emin]
+
+def ft_hist(final_W, ax=None, nbins=40):
+    W_p = final_W[final_W>0]
+    W_n = final_W[final_W<0]
+    cp, bp = np.histogram(W_p, bins=np.linspace(0, max(W_p), nbins))
+    cn, bn = np.histogram(-W_n, bins=bp)
+    svals = bp[:-1]+ (bp[1]-bp[0])/2
+    if ax is None:
+        return [bp[:-1], cp, cn*np.exp(svals)]
+    else:
+        dx = bp[1]-bp[0]
+        ax.bar(bp[:-1], cp, align='edge', width = dx,alpha=.5)
+        ax.bar(bn[:-1], cn*np.exp(svals),align='edge', width = dx, alpha=.5)
+        ax.set_yscale('log')
