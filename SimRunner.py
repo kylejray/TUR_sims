@@ -40,13 +40,15 @@ class TurRunner(SimManager):
         key_list = ['location', 'location', 'depth_0', 'depth_1', 'localization', 'localization', 'tilt']
         self.potential.default_params = [self.params[key] for key in key_list ]
         self.potential.default_params[0] *= -1
-        self.potential.default_params[-1] *= 0
+        self.potential.default_params[-1] *= -1
+        self.potential.default_params[3] = .1
+
 
         self.eq_protocol = self.potential.trivial_protocol().copy()
 
         self.potential.default_params[-1] = self.params['tilt']
-
-        self.potential.default_params[2] = .05*self.params['depth_0']
+        self.potential.default_params[2] = .1
+        self.potential.default_params[3] = self.params['depth_0']
         self.protocol =  self.potential.trivial_protocol().copy()
 
         self.system = System(self.protocol, self.potential)
@@ -98,13 +100,13 @@ class TurRunner(SimManager):
 
 class SaveSimLight():
     def run(self, SimManager):
+        N = SimManager.params['N']
         sim_dict = {}
         sim_dict.update({'work_stats':SimManager.sim.output.work_stats})
-        sim_dict.update({'all_state':SimManager.sim.output.all_state})
-        sim_dict.update({'all_W':SimManager.sim.output.all_state})
+        sim_dict.update({'all_W':SimManager.sim.output.all_W})
         final_W = SimManager.sim.output.final_W
         fluc_hist = ft_hist(final_W)
-        counts, bins = np.histogram(final_W, bins=100)
+        counts, bins = np.histogram(final_W, bins=int(2*N**(1/3)))
         sim_dict.update({'ft_hist':fluc_hist,'work_hist':[bins,counts]})
         SimManager.save_dict.update({'sim_dict':sim_dict})
 
@@ -207,9 +209,11 @@ def get_avg_stats(work, condition=None):
     emin = [ 1/avg_tanh-1, (sem_tanh/avg_tanh**2)]
     return [avg, ft, emin]
 
-def ft_hist(final_W, ax=None, nbins=40):
+def ft_hist(final_W, ax=None, nbins=None):
     W_p = final_W[final_W>0]
     W_n = final_W[final_W<0]
+    if nbins is None:
+        nbins = int(2*len(W_n)**(1/3))
     cp, bp = np.histogram(W_p, bins=np.linspace(0, max(W_p), nbins))
     cn, bn = np.histogram(-W_n, bins=bp)
     svals = bp[:-1]+ (bp[1]-bp[0])/2
