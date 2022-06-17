@@ -30,7 +30,7 @@ class TurRunner(SimManager):
         self.save_procs = [SaveParams(), SaveSimOutput(), SaveFinalWork()]
 
     def verify_param(self, key, val):
-        keys = ['tau', 'tilt', 'localization', 'location', 'hold', 'tau']
+        keys = ['tau', 'tilt', 'localization', 'location', 'hold', 'tau', 'depth_0', 'dpeth_1']
         objectives = ['{}>0'] * len(keys)
         obj_dict = {k:v for k,v in zip(keys, objectives)}
         return eval(obj_dict[key].format(val))
@@ -84,9 +84,6 @@ class TurRunner(SimManager):
             value.update(tur_dict)
         work_stats['moments'] = get_moments(works, 4)
         setattr(self.sim.output, 'work_stats', work_stats)
-            
-
-
 
 
     def set_simprocs(self, as_step):
