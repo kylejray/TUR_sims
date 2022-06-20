@@ -41,7 +41,7 @@ class TurRunner(SimManager):
         key_list = ['location', 'location', 'depth_0', 'depth_1', 'localization', 'localization', 'tilt']
         self.potential.default_params = [self.params[key] for key in key_list ]
         self.potential.default_params[0] *= -1
-        self.potential.default_params[-1] *= -1
+        self.potential.default_params[-1] *= 0
         #self.potential.default_params[3] = .4
 
 
