@@ -6,6 +6,7 @@ import kyle_tools as kt
 import numpy as np
 from scipy.stats import moment, sem
 from kyle_tools.multisim import SimManager
+from kyle_tools.fluctuation_theorems import ft_moment
 from sus.protocol_designer import *
 from sus.library.free_energy_probe import lintilt_gaussian as odw_potential
 
@@ -41,13 +42,13 @@ class TurRunner(SimManager):
         self.potential.default_params = [self.params[key] for key in key_list ]
         self.potential.default_params[0] *= -1
         self.potential.default_params[-1] *= -1
-        self.potential.default_params[3] = .1
+        #self.potential.default_params[3] = .4
 
 
         self.eq_protocol = self.potential.trivial_protocol().copy()
 
         self.potential.default_params[-1] = self.params['tilt']
-        self.potential.default_params[2] = .1
+        self.potential.default_params[2] = self.params['depth_1']
         self.potential.default_params[3] = self.params['depth_0']
         self.protocol =  self.potential.trivial_protocol().copy()
 
@@ -82,7 +83,7 @@ class TurRunner(SimManager):
         for key, value in work_stats.items():
             tur_dict = {k:v for k,v in zip(['hg','hvv','tggl'],get_turs(value['avg'][0]) )}
             value.update(tur_dict)
-        work_stats['moments'] = get_moments(works, 4)
+        work_stats['moments'] = get_moments(works, 10)
         setattr(self.sim.output, 'work_stats', work_stats)
 
 
@@ -185,8 +186,8 @@ def get_turs(sigma):
     except: pass
     return [HG, HVV, TGGL]
 
-def get_moments(sigma_dist, order):
-    return [moment(sigma_dist, moment=i+1) for i in range(order)]
+def get_moments(work, order):
+    return [ft_moment(work, i+1, condition=work>0) for i in range(order)]
 
 
 def get_avg_stats(work, condition=None):
