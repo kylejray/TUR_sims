@@ -83,7 +83,7 @@ class TurRunner(SimManager):
         for key, value in work_stats.items():
             tur_dict = {k:v for k,v in zip(['hg','hvv','tggl'],get_turs(value['avg'][0]) )}
             value.update(tur_dict)
-        work_stats['moments'] = get_moments(works, 10)
+        work_stats['moments'] = get_moments(works, 15)
         setattr(self.sim.output, 'work_stats', work_stats)
 
 
