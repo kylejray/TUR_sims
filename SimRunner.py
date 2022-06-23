@@ -9,6 +9,7 @@ from kyle_tools.multisim import SimManager
 from kyle_tools.fluctuation_theorems import ft_moment
 from sus.protocol_designer import *
 from sus.library.free_energy_probe import lintilt_gaussian as odw_potential
+from sus.library.potentials import even_1DW
 
 sys.path.append(os.path.expanduser('~/source/simtools/'))
 # from infoenginessims.api import *
@@ -18,7 +19,7 @@ from infoenginessims.simprocedures import trajectory_measurements as tp
 from infoenginessims.simprocedures.basic_simprocedures import ReturnFinalState
 
 
-default_parameters = {'localization':18., 'location':.5, 'depth_0':3, 'depth_1':3, 'tilt':2., 'beta':1., 'tau':1., 'scale':1., 'dt':1/10000, 'lambda':1, 'N':10_000, 'target_work':1.}
+default_parameters = {'localization':18., 'location':.5, 'depth_0':3, 'depth_1':3, 'tilt':2., 'beta':1., 'tau':1., 'scale':1., 'dt':1/10000, 'lambda':1, 'N':10_000, 'target_work':1., 'k':1}
 
 
 
@@ -27,6 +28,7 @@ class TurRunner(SimManager):
         self.potential = odw_potential
         self.params = params
         self.save_name = name_func
+        self.has_velocity = False
 
         self.save_procs = [SaveParams(), SaveSimOutput(), SaveFinalWork()]
 
@@ -53,9 +55,9 @@ class TurRunner(SimManager):
         self.protocol =  self.potential.trivial_protocol().copy()
 
         self.system = System(self.protocol, self.potential)
-        self.system.has_velocity=False
+        self.system.has_velocity = self.has_velocity
         self.eq_system = System(self.eq_protocol, self.potential)
-        self.eq_system.has_velocity=False
+        self.eq_system.has_velocity= self.has_velocity
         self.system.protocol.normalize()
         self.system.protocol.time_stretch(self.params['tau'])
 
@@ -126,6 +128,38 @@ class SaveFinalWork():
     def run(self, SimManager):
         SimManager.save_dict.update({'final_W':SimManager.sim.output.final_W})
 
+class TurFlipper(TurRunner):
+    def initialize_sim(self):
+        key_list = ['location', 'location', 'depth_0', 'depth_1', 'localization', 'localization', 'k']
+        self.potential.default_params = [self.params[key] for key in key_list ]
+        self.potential.default_params[0] *= -1
+        self.potential.default_params[-1] *= 0
+        #self.potential.default_params[3] = .4
+
+        
+        self.eq_protocol = self.potential.trivial_protocol().copy()
+
+        even_1DW.default_params = [0, self.params['k']]
+
+        self.protocol =  even_1DW.trivial_protocol().copy()
+
+        self.system = System(self.protocol, even_1DW)
+        self.system.has_velocity = self.has_velocity
+        self.eq_system = System(self.eq_protocol, self.potential)
+        self.eq_system.has_velocity= self.has_velocity
+        self.system.protocol.normalize()
+        self.system.protocol.time_stretch(np.pi/np.sqrt(self.params['k']))
+
+        self.init_state = self.eq_system.eq_state(self.params['N'], t=0, beta=self.params['beta'])
+
+        as_step = max(1, int((self.params['tau']/self.params['dt'])/500))
+
+        self.procs = self.set_simprocs(as_step) 
+        
+        sim_kwargs = {'damping':self.params['lambda'], 'temp':1/self.params['beta'], 'dt':self.params['dt'], 'procedures':self.procs}
+        self.sim = setup_sim(self.system, self.init_state, **sim_kwargs)
+        self.sim.reference_system = self.eq_system
+        return
 
 
 class TauRunner(TurRunner):
@@ -157,7 +191,7 @@ class TauRunner(TurRunner):
             rev_prot.time_shift(1)
         self.protocol = Compound_Protocol([prot, rev_prot])
         self.system = System(self.protocol, self.potential)
-        self.system.has_velocity=False
+        self.system.has_velocity = self.has_velocity
         self.system.protocol.normalize()
         self.system.protocol.time_stretch(self.params['tau'])
         self.init_state = self.system.eq_state(self.params['N'], t=0, beta=self.params['beta'])

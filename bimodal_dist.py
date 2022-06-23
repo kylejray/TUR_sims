@@ -46,10 +46,17 @@ class ContinuousDist(sp.stats.rv_continuous):
         return xmean
 
     def check_var(self):
-        mean = check_mean(self)
+        mean = self.check_mean()
         kernel = lambda x: (x-mean)**2 * self.pdf(x)
         var = sp.integrate.quad(kernel, -np.inf, np.inf)[0]
         return var
+
+    def check_moment(self, k):
+        mean = self.check_mean()
+        kernel = lambda x: (x-mean)**k * self.pdf(x)
+        moment = sp.integrate.quad(kernel, -np.inf, np.inf)[0]
+        return moment
+
 
     def check_mean_num(self, min=-30, max=40, N=200_000):
         x=np.linspace(min, max, N)
