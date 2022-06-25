@@ -33,9 +33,11 @@ class TurRunner(SimManager):
         self.save_procs = [SaveParams(), SaveSimOutput(), SaveFinalWork()]
 
     def verify_param(self, key, val):
-        keys = ['tau', 'tilt', 'localization', 'location', 'hold', 'tau', 'depth_0', 'depth_1']
+        keys = ['tau', 'tilt', 'localization', 'location', 'hold', 'tau', 'depth_0', 'depth_1', 'k']
         objectives = ['{}>0'] * len(keys)
         obj_dict = {k:v for k,v in zip(keys, objectives)}
+        obj_dict['hold'] = '0 <= {} < 1'
+        obj_dict['hold'] = '0 <= {} < 1'
         return eval(obj_dict[key].format(val))
         
 
@@ -160,6 +162,20 @@ class TurFlipper(TurRunner):
         self.sim = setup_sim(self.system, self.init_state, **sim_kwargs)
         self.sim.reference_system = self.eq_system
         return
+
+    def verify_param(self, key, val):
+        keys = ['tau', 'tilt', 'localization', 'location', 'tau', 'depth_0', 'depth_1', 'k']
+        objectives = ['{}>0'] * len(keys)
+        obj_dict = {k:v for k,v in zip(keys, objectives)}
+        if key == 'localization':
+            return 0 <= val < 2*self.params['location']
+        if key == 'location':
+            return 0 <= val < .5*self.params['localization']
+        if key == 'depth_0':
+            return 0 <= val > self.params['depth_1']
+        if key == 'depth_1':
+            return 0 <= val < self.params['depth_0']
+        return eval(obj_dict[key].format(val))
 
 
 class TauRunner(TurRunner):
