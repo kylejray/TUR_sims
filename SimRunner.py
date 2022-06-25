@@ -33,10 +33,9 @@ class TurRunner(SimManager):
         self.save_procs = [SaveParams(), SaveSimOutput(), SaveFinalWork()]
 
     def verify_param(self, key, val):
-        keys = ['tau', 'tilt', 'localization', 'location', 'hold', 'tau', 'depth_0', 'depth_1', 'k']
+        keys = list(self.params.keys())
         objectives = ['{}>0'] * len(keys)
         obj_dict = {k:v for k,v in zip(keys, objectives)}
-        obj_dict['hold'] = '0 <= {} < 1'
         obj_dict['hold'] = '0 <= {} < 1'
         return eval(obj_dict[key].format(val))
         
@@ -164,9 +163,10 @@ class TurFlipper(TurRunner):
         return
 
     def verify_param(self, key, val):
-        keys = ['tau', 'tilt', 'localization', 'location', 'tau', 'depth_0', 'depth_1', 'k']
+        keys = list(self.params.keys())
         objectives = ['{}>0'] * len(keys)
         obj_dict = {k:v for k,v in zip(keys, objectives)}
+        
         if key == 'localization':
             return 0 <= val < 2*self.params['location']
         if key == 'location':
