@@ -175,6 +175,8 @@ class TurFlipper(TurRunner):
             return 0 <= val > self.params['depth_1']
         if key == 'depth_1':
             return 0 <= val < self.params['depth_0']
+        if key == 'lambda':
+            return 0 <= val
         return eval(obj_dict[key].format(val))
 
 
