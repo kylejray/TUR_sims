@@ -170,7 +170,7 @@ class TurFlipper(TurRunner):
         if key == 'localization':
             return 0 <= val < 2*self.params['location']
         if key == 'location':
-            return 0 <= val < .5*self.params['localization']
+            return  val > .5*self.params['localization']
         if key == 'depth_0':
             return 0 <= val > self.params['depth_1']
         if key == 'depth_1':
