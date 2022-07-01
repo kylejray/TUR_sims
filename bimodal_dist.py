@@ -1,5 +1,7 @@
 import numpy as np
 import scipy as sp
+from scipy.interpolate import UnivariateSpline
+
 
 
 def gauss(x, sig, mu):
@@ -66,3 +68,15 @@ class ContinuousDist(sp.stats.rv_continuous):
 
     def check_mean_sample(self, N):
         return np.mean(self.rvs(size=N))
+
+    def analytic_trimodal_bound(E):
+        return 2*E*np.tanh(E/2), (np.tanh(E)*np.tanh(E/2))**-1 -1
+    
+    def trimodal_eps(sigma_list, npoints=1000):
+        ll = min(sigma_list)
+        ul = max(sigma_list)
+        if ll==ul:
+            ul += .5
+        avgs, bnd_list = analytic_trimodal_bound(np.linspace(.1, ul, npoints))
+    
+        return UnivariateSpline(avgs, bnd_list, k=1, s=0)
