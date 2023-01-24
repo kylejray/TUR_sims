@@ -5,11 +5,13 @@ from quick_sim import setup_sim
 import kyle_tools as kt
 import numpy as np
 from scipy.stats import moment, sem
-from kyle_tools.multisim import SimManager
+from kyle_tools.multisim import SimManager, FillSpace
 from kyle_tools.fluctuation_theorems import ft_moment
 from sus.protocol_designer import *
 from sus.library.free_energy_probe import lintilt_gaussian as odw_potential
 from sus.library.potentials import even_1DW
+from bimodal_dist import gauss, generate_dist
+
 
 sys.path.append(os.path.expanduser('~/source/simtools/'))
 # from infoenginessims.api import *
@@ -37,6 +39,11 @@ class TurRunner(SimManager):
         objectives = ['{}>0'] * len(keys)
         obj_dict = {k:v for k,v in zip(keys, objectives)}
         obj_dict['hold'] = '0 <= {} < 1'
+        if key == 'depth_0':
+            return 0 <= val > self.params['depth_1']
+        if key == 'depth_1':
+            return 0 <= val < self.params['depth_0']
+
         return eval(obj_dict[key].format(val))
         
 
@@ -274,3 +281,24 @@ def ft_hist(final_W, ax=None, nbins=None):
         ax.bar(bp[:-1], cp, align='edge', width = dx,alpha=.5)
         ax.bar(bn[:-1], cn*np.exp(svals),align='edge', width = dx, alpha=.5)
         ax.set_yscale('log')
+
+
+class TurFiller(FillSpace):
+    '''
+    Experimental Class, attempting to 
+    '''
+
+    def truncate_val(self, new_val):
+        if  0 < new_val[0] < 6:
+            return True
+        else:
+            if abs(self.past_vals[-1][0]-3) > abs(new_val-3):
+                return True
+
+    def get_val(self, simrun):
+        stats = simrun.sim.output.work_stats['pos']
+        avg = stats['avg'][0]
+        eps = stats['emin'][0]
+        tggl = stats['tggl']
+        hg = stats['hg']
+        return [avg, (eps-tggl)/(hg-tggl)]

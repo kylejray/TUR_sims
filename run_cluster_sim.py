@@ -41,6 +41,8 @@ simrun.change_params(initial_params)
 #n = [item*1000 for item in [1,4,16,64,256,512]][rank]
 
 '''
+Different options saved here for reminder
+
 locals = [ 20, 50, 100, 200]
 zs = [ 2, 3, 4, 5, 6]
 combos=[]

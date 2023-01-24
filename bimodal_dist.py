@@ -5,18 +5,30 @@ from scipy.interpolate import UnivariateSpline
 
 
 def gauss(x, sig, mu):
+    '''
+    simple gaussian pdf
+    '''
     return np.exp(-(x-mu)**2/(2*sig**2))
 
 def bimodal(x, std, mean):
+    '''
+    bimodal guassian, with the negative part weighted as in the DFT
+    '''
     if x >= 0:
         return gauss(x, std, mean) 
     if x < 0:
      return np.exp(x)*gauss(-x, std, mean)
     
 def loggauss(x, sig, mu):
+    '''
+    attempt to make the numerics work better by working in log space
+    '''
     return -(x-mu)**2/(2*sig**2)
 
 def log_bimodal(x, std, mean):
+    '''
+    attempt to make the numerics work better by working in log space
+    '''
     if x >= 0:
         out = loggauss(x, std, mean) 
     if x < 0:
@@ -25,23 +37,29 @@ def log_bimodal(x, std, mean):
     return np.exp(out)
 
 def generate_dist(pdf_nonorm, args):
+    '''
+    generates a ContinuousDist object from a non normalized pdf function and a set of argument
+    '''
     pdf = lambda x: pdf_nonorm(x, *args)
     dist = ContinuousDist()
     dist.set_pdf(pdf)
     return dist
 
 class ContinuousDist(sp.stats.rv_continuous):
+    '''
+    an augmented version of scipy.stats.rv_continuous object. Notably, it contains a method to set the pdf in a way that makes sense to me. Also, methods to check the different moments and the minimum eps^2 according to the TUT
+    '''
 
     def set_pdf(self, pdf_func, lims=[-np.inf, np.inf]):
         self.norm = sp.integrate.quad(pdf_func, *lims)[0]
         self.pdf_func = pdf_func
-        
         self._pdf = lambda y: self.pdf_func(y) / self.norm
 
     def get_min_eps(self):
         kernel = lambda x: np.tanh(x/2) * self.pdf(x)
         tanh_avg = sp.integrate.quad(kernel, -np.inf, np.inf)[0]
         return (1/tanh_avg) - 1
+
     def check_mean(self):
         kernel = lambda x: x * self.pdf(x)
         xmean = sp.integrate.quad(kernel, -np.inf, np.inf)[0]
